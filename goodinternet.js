@@ -8,6 +8,7 @@ require('dotenv').config();
 
 
 const screenshotSizes = ['1440x1024', 'iphone 5s'];
+const filenameFormat = '<%= url %>';
 
 const client = new SiteClient(process.env.DATOCMS_READ_WRITE);
 
@@ -31,6 +32,17 @@ function validateUrl(url) {
 	}
 }
 
+function upload(files) {
+	var promise = new Promise(function(resolve, reject) {
+		console.log("stream:" + files);
+
+		resolve('hello');
+
+	});
+
+	return promise;
+}
+
 function screenshot(url) {
 	console.log(`Taking screenshots of ${url}`);
 
@@ -40,10 +52,9 @@ function screenshot(url) {
 		})
 		.dest(process.cwd())
 		.run()
-		.then((e) => {
-			e.forEach(function(file) {
-				console.log(file.filename);
-			});
+		.then(upload)
+		.then(() => {
+			console.log('all done');
 		})
 		.catch(err => {
 			if (err.noStack) {
@@ -62,7 +73,8 @@ function init(args) {
 
 	const url = validateUrl(args[0]);
 
-	screenshot(url);
+	const files = screenshot(url);
+	upload(files);
 }
 
 
