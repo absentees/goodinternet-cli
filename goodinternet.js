@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 'use strict';
+require('babel-polyfill');
 const meow = require('meow');
 const sudoBlock = require('sudo-block');
 const SiteClient = require('datocms-client').SiteClient;
@@ -32,18 +33,12 @@ function validateUrl(url) {
 	}
 }
 
-function upload(files) {
-	var promise = new Promise(function(resolve, reject) {
-		console.log("stream:" + files);
-
-		resolve('hello');
-
-	});
-
-	return promise;
+function upload() {
+	return Promise.resolve("Screenshots uploaded");
 }
 
 function screenshot(url) {
+
 	console.log(`Taking screenshots of ${url}`);
 
 	const pageres = new Pageres()
@@ -52,9 +47,8 @@ function screenshot(url) {
 		})
 		.dest(process.cwd())
 		.run()
-		.then(upload)
-		.then(() => {
-			console.log('all done');
+		.then((e) => {
+			return Promise.resolve(e);
 		})
 		.catch(err => {
 			if (err.noStack) {
@@ -64,19 +58,31 @@ function screenshot(url) {
 				throw err;
 			}
 		});
+
+
 }
 
-function init(args) {
-	if (args.length === 0 || args.length > 1) {
-		cli.showHelp(1);
+async function init(args) {
+	try {
+		if (args.length === 0 || args.length > 1) {
+			cli.showHelp(1);
+		}
+
+		const url = validateUrl(args[0]);
+
+		let localFiles = await screenshot(url);
+		let success = await upload(localFiles);
+
+		console.log(success);
+		console.log("All done.");
+
+	} catch (e) {
+		console.log(e.message);
 	}
-
-	const url = validateUrl(args[0]);
-
-	const files = screenshot(url);
-	upload(files);
 }
 
 
 sudoBlock();
-init(cli.input);
+(async () => {
+    await init(cli.input);;
+})();

@@ -2,9 +2,11 @@
   "name": "goodinternet-cli",
   "version": "1.0.0",
   "description": "Command line interface to blog to goodinternet",
-  "main": "index.js",
+  "main": "goodinternet.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "./node_modules/.bin/babel goodinternet.js --out-file goodinternet-compiled.js",
+    "prepublish": "npm run build"
   },
   "repository": {
     "type": "git",
@@ -16,13 +18,16 @@
     "url": "https://github.com/absentees/goodinternet-cli/issues"
   },
   "bin": {
-    "goodinternet": "goodinternet.js"
+    "goodinternet": "goodinternet-compiled.js"
   },
   "files": [
     "goodinternet.js"
   ],
+  "start": "babel-node goodinternet.js",
   "homepage": "https://github.com/absentees/goodinternet-cli#readme",
   "dependencies": {
+    "babel-cli": "^6.24.1",
+    "babel-preset-es2017": "^6.24.1",
     "datocms-client": "^0.3.23",
     "dotenv": "^4.0.0",
     "meow": "^3.7.0",
