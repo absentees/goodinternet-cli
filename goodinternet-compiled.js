@@ -2,8 +2,60 @@
 
 'use strict';
 
+let upload = (() => {
+	var _ref = _asyncToGenerator(function* (screenshotObject) {
+		let modelID = yield client.itemTypes.all();
+
+		let uploadRequestDesktop = yield client.uploadImage(screenshotObject.filenames[0]);
+		let uploadRequestMobile = yield client.uploadImage(screenshotObject.filenames[1]);
+
+		let record = yield client.items.create({
+			itemType: '10825',
+			name: screenshotObject.name,
+			url: screenshotObject.url,
+			description: 'blah',
+			desktop_screenshot: uploadRequestDesktop,
+			mobile_screenshot: uploadRequestMobile
+		});
+
+		return Promise.resolve(record);
+	});
+
+	return function upload(_x) {
+		return _ref.apply(this, arguments);
+	};
+})();
+
+let screenshot = (() => {
+	var _ref2 = _asyncToGenerator(function* (url) {
+
+		console.log(`Taking screenshots of ${url}`);
+
+		const pageres = new Pageres().src(url, screenshotSizes, {
+			crop: true
+		}).dest(process.cwd());
+
+		const streams = yield pageres.run();
+
+		let screenshotObject = {
+			name: url,
+			url: url
+		};
+
+		screenshotObject.filenames = streams.map(function (stream) {
+			return stream.filename;
+		});
+
+		return Promise.resolve(screenshotObject);
+	});
+
+	return function screenshot(_x2) {
+		return _ref2.apply(this, arguments);
+	};
+})();
+
 let init = (() => {
-	var _ref = _asyncToGenerator(function* (args) {
+	var _ref3 = _asyncToGenerator(function* (args) {
 		try {
 			if (args.length === 0 || args.length > 1) {
 				cli.showHelp(1);
@@ -12,17 +64,16 @@ let init = (() => {
 			const url = validateUrl(args[0]);
 
 			let localFiles = yield screenshot(url);
-			let success = yield upload(localFiles);
+			let record = yield upload(localFiles);
 
-			console.log(success);
-			console.log("All done.");
+			console.log("All done");
 		} catch (e) {
 			console.log(e.message);
 		}
 	});
 
-	return function init(_x) {
-		return _ref.apply(this, arguments);
+	return function init(_x3) {
+		return _ref3.apply(this, arguments);
 	};
 })();
 
@@ -58,28 +109,6 @@ function validateUrl(url) {
 		console.error("URL is no good, please try again.");
 		process.exit(1);
 	}
-}
-
-function upload() {
-	return Promise.resolve("Screenshots uploaded");
-}
-
-function screenshot(url) {
-
-	console.log(`Taking screenshots of ${url}`);
-
-	const pageres = new Pageres().src(url, screenshotSizes, {
-		crop: true
-	}).dest(process.cwd()).run().then(e => {
-		return Promise.resolve(e);
-	}).catch(err => {
-		if (err.noStack) {
-			console.log(err.message);
-			process.exit(1);
-		} else {
-			throw err;
-		}
-	});
 }
 
 sudoBlock();

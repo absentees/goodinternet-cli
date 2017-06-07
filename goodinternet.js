@@ -33,11 +33,25 @@ function validateUrl(url) {
 	}
 }
 
-function upload() {
-	return Promise.resolve("Screenshots uploaded");
+async function upload(screenshotObject) {
+	let modelID = await client.itemTypes.all();
+
+	let uploadRequestDesktop = await client.uploadImage(screenshotObject.filenames[0]);
+	let uploadRequestMobile = await client.uploadImage(screenshotObject.filenames[1]);
+
+	let record = await client.items.create({
+		itemType: '10825',
+		name: screenshotObject.name,
+		url: screenshotObject.url,
+		description: 'blah',
+		desktop_screenshot: uploadRequestDesktop,
+		mobile_screenshot: uploadRequestMobile
+	});
+
+	return Promise.resolve(record);
 }
 
-function screenshot(url) {
+async function screenshot(url) {
 
 	console.log(`Taking screenshots of ${url}`);
 
@@ -45,21 +59,20 @@ function screenshot(url) {
 		.src(url, screenshotSizes, {
 			crop: true
 		})
-		.dest(process.cwd())
-		.run()
-		.then((e) => {
-			return Promise.resolve(e);
-		})
-		.catch(err => {
-			if (err.noStack) {
-				console.log(err.message);
-				process.exit(1);
-			} else {
-				throw err;
-			}
-		});
+		.dest(process.cwd());
 
+	const streams = await pageres.run();
 
+	let screenshotObject = {
+		name: url,
+		url: url
+	}
+
+	screenshotObject.filenames = streams.map(function(stream){
+		return stream.filename
+	});
+
+	return Promise.resolve(screenshotObject);
 }
 
 async function init(args) {
@@ -71,11 +84,9 @@ async function init(args) {
 		const url = validateUrl(args[0]);
 
 		let localFiles = await screenshot(url);
-		let success = await upload(localFiles);
+		let record = await upload(localFiles);
 
-		console.log(success);
-		console.log("All done.");
-
+		console.log("All done");
 	} catch (e) {
 		console.log(e.message);
 	}
