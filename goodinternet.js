@@ -6,6 +6,8 @@ const sudoBlock = require('sudo-block');
 const SiteClient = require('datocms-client').SiteClient;
 const Pageres = require('pageres');
 const Metascraper = require('metascraper');
+const axios = require('axios');
+const fs = require('fs');
 require('dotenv').config();
 
 
@@ -35,8 +37,7 @@ function validateUrl(url) {
 }
 
 async function upload(siteDetails,url,description,screenshots) {
-	// let modelID = await client.itemTypes.all();
-
+	console.log("Uploading files");
 
 	let uploadRequestDesktop = await client.uploadImage(screenshots[0]);
 	let uploadRequestMobile = await client.uploadImage(screenshots[1]);
@@ -57,7 +58,7 @@ async function screenshot(url) {
 
 	console.log(`Taking screenshots of ${url}`);
 
-	const pageres = new Pageres()
+	const pageres = new Pageres({delay: 5})
 		.src(url, screenshotSizes, {
 			crop: true
 		})
@@ -79,6 +80,26 @@ async function getDetails(url){
 	return Promise.resolve(details);
 }
 
+function deleteLocalFiles(paths) {
+	paths.forEach(function(path){
+		fs.unlink(path, (err) => {
+			if (err) {
+				console.error("Failed to delete local file: " + error);
+			} else {
+				console.log("Deleted local: " + path);
+			}
+		})
+	})
+}
+
+async function publishSite() {
+	console.log("Publishing site.");
+
+	let published = await axios.post(process.env.NETLIFY_DEPLOY_HOOK);
+
+	return Promise.resolve(published);
+}
+
 async function init(args) {
 	try {
 		if (args.length === 0 || args.length < 2) {
@@ -88,11 +109,21 @@ async function init(args) {
 		const url = validateUrl(args[0]);
 		const description = args[1];
 		const siteDetails = await getDetails(url);
+		let screenshots;
+		if (siteDetails.url == null) {
+			screenshots = await screenshot(url);
+		} else {
+			screenshots = await screenshot(siteDetails.url);
+		}
 
-		let screenshots = await screenshot(url);
 		let record = await upload(siteDetails,url,description,screenshots);
 
-		console.log("All done");
+		let deployed = await publishSite();
+		console.log("All done.");
+
+		deleteLocalFiles(screenshots);
+
+
 	} catch (e) {
 		console.log(e.message);
 	}

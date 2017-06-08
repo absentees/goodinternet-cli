@@ -4,8 +4,7 @@
 
 let upload = (() => {
 	var _ref = _asyncToGenerator(function* (siteDetails, url, description, screenshots) {
-		// let modelID = await client.itemTypes.all();
-
+		console.log("Uploading files");
 
 		let uploadRequestDesktop = yield client.uploadImage(screenshots[0]);
 		let uploadRequestMobile = yield client.uploadImage(screenshots[1]);
@@ -32,7 +31,7 @@ let screenshot = (() => {
 
 		console.log(`Taking screenshots of ${url}`);
 
-		const pageres = new Pageres().src(url, screenshotSizes, {
+		const pageres = new Pageres({ delay: 5 }).src(url, screenshotSizes, {
 			crop: true
 		}).dest(process.cwd());
 
@@ -63,8 +62,22 @@ let getDetails = (() => {
 	};
 })();
 
+let publishSite = (() => {
+	var _ref4 = _asyncToGenerator(function* () {
+		console.log("Publishing site.");
+
+		let published = yield axios.post(process.env.NETLIFY_DEPLOY_HOOK);
+
+		return Promise.resolve(published);
+	});
+
+	return function publishSite() {
+		return _ref4.apply(this, arguments);
+	};
+})();
+
 let init = (() => {
-	var _ref4 = _asyncToGenerator(function* (args) {
+	var _ref5 = _asyncToGenerator(function* (args) {
 		try {
 			if (args.length === 0 || args.length < 2) {
 				cli.showHelp(1);
@@ -73,18 +86,26 @@ let init = (() => {
 			const url = validateUrl(args[0]);
 			const description = args[1];
 			const siteDetails = yield getDetails(url);
+			let screenshots;
+			if (siteDetails.url == null) {
+				screenshots = yield screenshot(url);
+			} else {
+				screenshots = yield screenshot(siteDetails.url);
+			}
 
-			let screenshots = yield screenshot(url);
 			let record = yield upload(siteDetails, url, description, screenshots);
 
-			console.log("All done");
+			let deployed = yield publishSite();
+			console.log("All done.");
+
+			deleteLocalFiles(screenshots);
 		} catch (e) {
 			console.log(e.message);
 		}
 	});
 
 	return function init(_x7) {
-		return _ref4.apply(this, arguments);
+		return _ref5.apply(this, arguments);
 	};
 })();
 
@@ -96,6 +117,8 @@ const sudoBlock = require('sudo-block');
 const SiteClient = require('datocms-client').SiteClient;
 const Pageres = require('pageres');
 const Metascraper = require('metascraper');
+const axios = require('axios');
+const fs = require('fs');
 require('dotenv').config();
 
 const screenshotSizes = ['1440x1024', 'iphone 5s'];
@@ -121,6 +144,18 @@ function validateUrl(url) {
 		console.error("URL is no good, please try again.");
 		process.exit(1);
 	}
+}
+
+function deleteLocalFiles(paths) {
+	paths.forEach(function (path) {
+		fs.unlink(path, err => {
+			if (err) {
+				console.error("Failed to delete local file: " + error);
+			} else {
+				console.log("Deleted local: " + path);
+			}
+		});
+	});
 }
 
 sudoBlock();

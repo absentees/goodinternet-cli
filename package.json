@@ -26,6 +26,7 @@
   "start": "babel-node goodinternet.js",
   "homepage": "https://github.com/absentees/goodinternet-cli#readme",
   "dependencies": {
+    "axios": "^0.16.2",
     "babel-cli": "^6.24.1",
     "babel-preset-es2017": "^6.24.1",
     "datocms-client": "^0.3.23",
