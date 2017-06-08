@@ -26,3 +26,5 @@ This will set off the following:
 - Take screenshots of the url provided at both desktop and mobile resolution
 - Push the screenshots, title, url and description as a new record to DatoCMS
 - Set off a new deployment via Netlify
+
+http://goodinternet.online has now been updated with your latest website.
