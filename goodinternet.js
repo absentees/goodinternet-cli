@@ -5,6 +5,7 @@ const meow = require('meow');
 const sudoBlock = require('sudo-block');
 const SiteClient = require('datocms-client').SiteClient;
 const Pageres = require('pageres');
+const Metascraper = require('metascraper');
 require('dotenv').config();
 
 
@@ -17,7 +18,7 @@ const cli = meow(`
 	Will accept a single url to screenshot and post to goodinternet.online. That's it.
 
 	Usage
-		$ goodinternet <url>
+		$ goodinternet <url> <description>
 
 	Examples
 		$ goodinternet http://google.com`);
@@ -33,17 +34,18 @@ function validateUrl(url) {
 	}
 }
 
-async function upload(screenshotObject) {
-	let modelID = await client.itemTypes.all();
+async function upload(siteDetails,url,description,screenshots) {
+	// let modelID = await client.itemTypes.all();
 
-	let uploadRequestDesktop = await client.uploadImage(screenshotObject.filenames[0]);
-	let uploadRequestMobile = await client.uploadImage(screenshotObject.filenames[1]);
+
+	let uploadRequestDesktop = await client.uploadImage(screenshots[0]);
+	let uploadRequestMobile = await client.uploadImage(screenshots[1]);
 
 	let record = await client.items.create({
 		itemType: '10825',
-		name: screenshotObject.name,
-		url: screenshotObject.url,
-		description: 'blah',
+		name: siteDetails.title,
+		url: url,
+		description: description,
 		desktop_screenshot: uploadRequestDesktop,
 		mobile_screenshot: uploadRequestMobile
 	});
@@ -63,28 +65,32 @@ async function screenshot(url) {
 
 	const streams = await pageres.run();
 
-	let screenshotObject = {
-		name: url,
-		url: url
-	}
-
-	screenshotObject.filenames = streams.map(function(stream){
+	let screenshots = streams.map(function(stream){
 		return stream.filename
 	});
 
-	return Promise.resolve(screenshotObject);
+	return Promise.resolve(screenshots);
+}
+
+async function getDetails(url){
+	const details = await Metascraper.scrapeUrl(url);
+	console.log(details);
+
+	return Promise.resolve(details);
 }
 
 async function init(args) {
 	try {
-		if (args.length === 0 || args.length > 1) {
+		if (args.length === 0 || args.length < 2) {
 			cli.showHelp(1);
 		}
 
 		const url = validateUrl(args[0]);
+		const description = args[1];
+		const siteDetails = await getDetails(url);
 
-		let localFiles = await screenshot(url);
-		let record = await upload(localFiles);
+		let screenshots = await screenshot(url);
+		let record = await upload(siteDetails,url,description,screenshots);
 
 		console.log("All done");
 	} catch (e) {

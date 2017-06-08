@@ -3,17 +3,18 @@
 'use strict';
 
 let upload = (() => {
-	var _ref = _asyncToGenerator(function* (screenshotObject) {
-		let modelID = yield client.itemTypes.all();
+	var _ref = _asyncToGenerator(function* (siteDetails, url, description, screenshots) {
+		// let modelID = await client.itemTypes.all();
 
-		let uploadRequestDesktop = yield client.uploadImage(screenshotObject.filenames[0]);
-		let uploadRequestMobile = yield client.uploadImage(screenshotObject.filenames[1]);
+
+		let uploadRequestDesktop = yield client.uploadImage(screenshots[0]);
+		let uploadRequestMobile = yield client.uploadImage(screenshots[1]);
 
 		let record = yield client.items.create({
 			itemType: '10825',
-			name: screenshotObject.name,
-			url: screenshotObject.url,
-			description: 'blah',
+			name: siteDetails.title,
+			url: url,
+			description: description,
 			desktop_screenshot: uploadRequestDesktop,
 			mobile_screenshot: uploadRequestMobile
 		});
@@ -21,7 +22,7 @@ let upload = (() => {
 		return Promise.resolve(record);
 	});
 
-	return function upload(_x) {
+	return function upload(_x, _x2, _x3, _x4) {
 		return _ref.apply(this, arguments);
 	};
 })();
@@ -37,34 +38,44 @@ let screenshot = (() => {
 
 		const streams = yield pageres.run();
 
-		let screenshotObject = {
-			name: url,
-			url: url
-		};
-
-		screenshotObject.filenames = streams.map(function (stream) {
+		let screenshots = streams.map(function (stream) {
 			return stream.filename;
 		});
 
-		return Promise.resolve(screenshotObject);
+		return Promise.resolve(screenshots);
 	});
 
-	return function screenshot(_x2) {
+	return function screenshot(_x5) {
 		return _ref2.apply(this, arguments);
 	};
 })();
 
+let getDetails = (() => {
+	var _ref3 = _asyncToGenerator(function* (url) {
+		const details = yield Metascraper.scrapeUrl(url);
+		console.log(details);
+
+		return Promise.resolve(details);
+	});
+
+	return function getDetails(_x6) {
+		return _ref3.apply(this, arguments);
+	};
+})();
+
 let init = (() => {
-	var _ref3 = _asyncToGenerator(function* (args) {
+	var _ref4 = _asyncToGenerator(function* (args) {
 		try {
-			if (args.length === 0 || args.length > 1) {
+			if (args.length === 0 || args.length < 2) {
 				cli.showHelp(1);
 			}
 
 			const url = validateUrl(args[0]);
+			const description = args[1];
+			const siteDetails = yield getDetails(url);
 
-			let localFiles = yield screenshot(url);
-			let record = yield upload(localFiles);
+			let screenshots = yield screenshot(url);
+			let record = yield upload(siteDetails, url, description, screenshots);
 
 			console.log("All done");
 		} catch (e) {
@@ -72,8 +83,8 @@ let init = (() => {
 		}
 	});
 
-	return function init(_x3) {
-		return _ref3.apply(this, arguments);
+	return function init(_x7) {
+		return _ref4.apply(this, arguments);
 	};
 })();
 
@@ -84,6 +95,7 @@ const meow = require('meow');
 const sudoBlock = require('sudo-block');
 const SiteClient = require('datocms-client').SiteClient;
 const Pageres = require('pageres');
+const Metascraper = require('metascraper');
 require('dotenv').config();
 
 const screenshotSizes = ['1440x1024', 'iphone 5s'];
@@ -95,7 +107,7 @@ const cli = meow(`
 	Will accept a single url to screenshot and post to goodinternet.online. That's it.
 
 	Usage
-		$ goodinternet <url>
+		$ goodinternet <url> <description>
 
 	Examples
 		$ goodinternet http://google.com`);

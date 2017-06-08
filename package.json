@@ -31,6 +31,7 @@
     "datocms-client": "^0.3.23",
     "dotenv": "^4.0.0",
     "meow": "^3.7.0",
+    "metascraper": "^1.0.6",
     "pageres": "^4.5.0",
     "sudo-block": "^1.2.0"
   }
