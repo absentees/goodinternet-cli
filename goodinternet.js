@@ -58,9 +58,9 @@ async function screenshot(url) {
 
 	console.log(`Taking screenshots of ${url}`);
 
-	const pageres = new Pageres({delay: 5})
+	const pageres = new Pageres({delay: 10})
 		.src(url, screenshotSizes, {
-			crop: true
+			crop: false
 		})
 		.dest(process.cwd());
 
@@ -75,7 +75,6 @@ async function screenshot(url) {
 
 async function getDetails(url){
 	const details = await Metascraper.scrapeUrl(url);
-	console.log(details);
 
 	return Promise.resolve(details);
 }
@@ -110,6 +109,7 @@ async function init(args) {
 		const description = args[1];
 		const siteDetails = await getDetails(url);
 		let screenshots;
+		
 		if (siteDetails.url == null) {
 			screenshots = await screenshot(url);
 		} else {

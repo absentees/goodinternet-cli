@@ -31,8 +31,8 @@ let screenshot = (() => {
 
 		console.log(`Taking screenshots of ${url}`);
 
-		const pageres = new Pageres({ delay: 5 }).src(url, screenshotSizes, {
-			crop: true
+		const pageres = new Pageres({ delay: 10 }).src(url, screenshotSizes, {
+			crop: false
 		}).dest(process.cwd());
 
 		const streams = yield pageres.run();
@@ -52,7 +52,6 @@ let screenshot = (() => {
 let getDetails = (() => {
 	var _ref3 = _asyncToGenerator(function* (url) {
 		const details = yield Metascraper.scrapeUrl(url);
-		console.log(details);
 
 		return Promise.resolve(details);
 	});
@@ -87,6 +86,7 @@ let init = (() => {
 			const description = args[1];
 			const siteDetails = yield getDetails(url);
 			let screenshots;
+
 			if (siteDetails.url == null) {
 				screenshots = yield screenshot(url);
 			} else {
