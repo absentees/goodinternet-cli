@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 require('babel-polyfill');
+require('dotenv').config();
 const meow = require('meow');
 const sudoBlock = require('sudo-block');
 const SiteClient = require('datocms-client').SiteClient;
@@ -8,13 +9,17 @@ const Pageres = require('pageres');
 const Metascraper = require('metascraper');
 const axios = require('axios');
 const fs = require('fs');
-require('dotenv').config();
-
+const Airtable = require('airtable');
+const imgur = require('imgur');
 
 const screenshotSizes = ['1440x1024', 'iphone 5s'];
 const filenameFormat = '<%= url %>';
 
-const client = new SiteClient(process.env.DATOCMS_READ_WRITE);
+Airtable.configure({
+    endpointUrl: 'https://api.airtable.com',
+    apiKey: process.env.GOOD_INTERNET_AIRTABLE_API_KEY
+});
+var base = Airtable.base(process.env.GOOD_INTERNET_BASE_ID);
 
 const cli = meow(`
 	Will accept a single url to screenshot and post to goodinternet.online. That's it.
@@ -36,20 +41,37 @@ function validateUrl(url) {
 	}
 }
 
-async function upload(siteDetails,url,description,screenshots) {
+async function uploadToImgur(screenshots) {
+	console.log("Uploading images to Imgur");
+	imgur.setCredentials(process.env.IMGUR_USER, process.env.IMGUR_PASSWORD, process.env.IMGUR_CLIENTID);
+
+	// Upload images to imgur good internet folder
+	let images = await imgur.uploadImages(screenshots, 'File', process.env.GOOD_INTERNET_IMGUR_ALBUM_ID);
+	
+	return Promise.resolve(images); 
+}
+
+async function uploadToCMS(siteDetails,url,description,imgurURLs) {
 	console.log("Uploading files");
 
-	let uploadRequestDesktop = await client.uploadImage(screenshots[0]);
-	let uploadRequestMobile = await client.uploadImage(screenshots[1]);
+	// let uploadRequestDesktop = await client.uploadImage(screenshots[0]);
+	// let uploadRequestMobile = await client.uploadImage(screenshots[1]);
 
-	let record = await client.items.create({
-		itemType: '10825',
-		name: siteDetails.title,
-		url: url,
-		description: description,
-		desktop_screenshot: uploadRequestDesktop,
-		mobile_screenshot: uploadRequestMobile
-	});
+	let record = await base('Good').create({
+		"Name": siteDetails.title,
+		"URL": url,
+		"Description": description,
+		"Desktop Screenshot": [
+		  {
+			"url": imgurURLs[0].link
+		  }
+		],
+		"Mobile Screenshot": [
+		  {
+			"url": imgurURLs[1].link
+		  }
+		]
+	  });
 
 	return Promise.resolve(record);
 }
@@ -105,22 +127,32 @@ async function init(args) {
 			cli.showHelp(1);
 		}
 
+		// Check that the URL is good
 		const url = validateUrl(args[0]);
 		const description = args[1];
+
+		// Get meta information
 		const siteDetails = await getDetails(url);
 		let screenshots;
-		
+
+		// Screenshot the websites
 		if (siteDetails.url == null) {
 			screenshots = await screenshot(url);
 		} else {
 			screenshots = await screenshot(siteDetails.url);
 		}
 
-		let record = await upload(siteDetails,url,description,screenshots);
+		// Upload to Imgur
+		let imgurURLs = await uploadToImgur(screenshots);
 
-		let deployed = await publishSite();
+		// Upload to CMS
+		let record = await uploadToCMS(siteDetails,url,description,imgurURLs);
+
+		// Hit Netlify hook
+		// let deployed = await publishSite();
 		console.log("All done.");
 
+		// Delete local screenshot files
 		deleteLocalFiles(screenshots);
 
 
