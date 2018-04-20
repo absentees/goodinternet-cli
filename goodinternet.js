@@ -82,7 +82,8 @@ async function screenshot(url) {
 
 	const pageres = new Pageres({delay: 10})
 		.src(url, screenshotSizes, {
-			crop: false
+			crop: true,
+			format: "jpg"
 		})
 		.dest(process.cwd());
 
